@@ -574,6 +574,23 @@ let state = {
 /* =========================================================
    DATE / TIME HELPERS (Asia/Dhaka)
    ========================================================= */
+  function workDate(){
+  const hr = parseInt(new Date().toLocaleString("en-US",{
+    timeZone: CONFIG.TIMEZONE, hour:"2-digit", hour12: false
+  }));
+  if(hr < 12){
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const parts = new Intl.DateTimeFormat("en-CA",{
+      timeZone: CONFIG.TIMEZONE,
+      year:"numeric", month:"2-digit", day:"2-digit"
+    }).formatToParts(d);
+    const o = {};
+    parts.forEach(p => o[p.type] = p.value);
+    return `${o.year}-${o.month}-${o.day}`;
+  }
+  return dhakaDate();
+}
 function dhakaDate(){
   // Returns YYYY-MM-DD in Asia/Dhaka
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -610,7 +627,7 @@ function uuid(){
   });
 }
 function validateTime(s){
-  return /^([1-9]|0[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM|am|pm)$/.test((s||"").trim());
+  return /^([1-9]|0[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$/i.test((s||"").trim());
 }
 function normalizeTime(s){
   // Force "HH:MM AM/PM" with single space, uppercase
@@ -714,7 +731,7 @@ function getWorkEntries(employee, date){
 async function actStartDay(){
   const emp = document.getElementById("empSelect").value;
   if(!emp){ return toast("Please select your name first", "warn"); }
-  const date = dhakaDate();
+  const date = workDate();
   const existing = findSession(emp, date);
   if(existing){
     if(existing.status === "Started") return toast(`${emp} already started today at ${existing.startTime}`, "warn");
@@ -745,7 +762,7 @@ async function actStartDay(){
 async function actEndDay(){
   const emp = document.getElementById("empSelect").value;
   if(!emp) return toast("Please select your name first", "warn");
-  const date = dhakaDate();
+  const date = workDate();
   const existing = findSession(emp, date);
   if(!existing) return toast(`${emp} hasn't started today yet`, "warn");
   if(existing.status === "Completed") return toast(`${emp} already ended today at ${existing.endTime}`, "warn");
@@ -770,7 +787,7 @@ async function actEndDay(){
 async function actAddWork(){
   const emp = state.selectedEmployee;
   if(!emp) return;
-  const date = dhakaDate();
+  const date = workDate();
   const tInput = document.getElementById("workTime");
   const dInput = document.getElementById("workDescr");
   const rawTime = tInput.value.trim();
@@ -879,7 +896,7 @@ function renderDashboard(){
 
   // staff cards for today
   const grid = document.getElementById("staffGrid");
-  const today = dhakaDate();
+  const today = workDate();
   grid.innerHTML = "";
   CONFIG.EMPLOYEES.forEach(emp => {
     const session = findSession(emp, today);
@@ -912,7 +929,7 @@ function openEmployee(emp){
 
 function renderEmployee(){
   const emp = state.selectedEmployee;
-  const today = dhakaDate();
+  const today = workDate();
   const session = findSession(emp, today);
   const works = getWorkEntries(emp, today);
   document.getElementById("empName").textContent = emp;
@@ -1027,7 +1044,7 @@ function exportCSV(){
   const blob = new Blob([lines.join("\n")], {type:"text/csv"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `staff-logbook-${dhakaDate()}.csv`;
+  a.download = `staff-logbook-${workDate()}.csv`;
   a.click();
   toast("CSV downloaded", "success");
 }
